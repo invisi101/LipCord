@@ -41,10 +41,14 @@ This will install the following files:
 - `~/.config/lipcord/config` (configuration)
 
 To install LipCord:
-1. Clone this repository or download the files
-2. Run `./install.sh`
-3. Ensure your screen locker requires a password on wake/unlock (this is the default for most Linux setups)
-4. Rename a USB drive as *LipCord*
+
+```bash
+git clone https://github.com/invisi101/LipCord.git
+cd LipCord
+./install.sh
+```
+
+Then rename a USB drive as *LipCord* and you're ready to go. Your screen locker should require a password on wake/unlock (this is the default for most Linux setups).
 
 To use LipCord:
 1. Launch **LipCord** from your app launcher or run `lipcord` in a terminal
