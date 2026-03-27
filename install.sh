@@ -3,16 +3,32 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lipcord"
-SERVICE_DIR="$HOME/.config/systemd/user"
+BIN_DIR="$HOME/.local/bin"
 
 echo "=== LipCord Installer ==="
 echo
 
-# Install the monitoring script
-mkdir -p "$HOME/.local/bin"
-cp "$SCRIPT_DIR/lipcord" "$HOME/.local/bin/lipcord"
-chmod +x "$HOME/.local/bin/lipcord"
-echo "[+] Installed lipcord to ~/.local/bin/lipcord"
+# Check for python3 + tkinter
+if ! python3 -c "import tkinter" 2>/dev/null; then
+    echo "[!] Python tkinter is required but not found."
+    echo "    Install it with your package manager:"
+    echo "      Arch:   sudo pacman -S tk"
+    echo "      Debian: sudo apt install python3-tk"
+    echo "      Fedora: sudo dnf install python3-tkinter"
+    exit 1
+fi
+
+# Install files
+mkdir -p "$BIN_DIR"
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+
+cp "$SCRIPT_DIR/lipcord" "$BIN_DIR/lipcord"
+chmod +x "$BIN_DIR/lipcord"
+echo "[+] Installed lipcord (GUI) to $BIN_DIR/lipcord"
+
+cp "$SCRIPT_DIR/lipcord-daemon" "$BIN_DIR/lipcord-daemon"
+chmod +x "$BIN_DIR/lipcord-daemon"
+echo "[+] Installed lipcord-daemon to $BIN_DIR/lipcord-daemon"
 
 # Install default config if none exists
 mkdir -p "$CONFIG_DIR"
@@ -20,14 +36,11 @@ if [ ! -f "$CONFIG_DIR/config" ]; then
     cat > "$CONFIG_DIR/config" << 'EOF'
 # LipCord Configuration
 
-# Lock the session when RipCord is removed (yes/no)
+# Lock the session when LipCord USB is removed (yes/no)
 LOCK=yes
 
-# Suspend the system when RipCord is removed (yes/no)
+# Suspend the system when LipCord USB is removed (yes/no)
 SUSPEND=yes
-
-# USB drive label to monitor
-LABEL=RipCord
 
 # Polling interval in seconds
 POLL_INTERVAL=1
@@ -37,19 +50,30 @@ else
     echo "[=] Config already exists at $CONFIG_DIR/config (kept existing)"
 fi
 
-# Install systemd user service
-mkdir -p "$SERVICE_DIR"
-cp "$SCRIPT_DIR/lipcord.service" "$SERVICE_DIR/lipcord.service"
-echo "[+] Installed systemd user service"
+# Install icons
+mkdir -p "$ICON_DIR/scalable/apps" "$ICON_DIR/128x128/apps" "$ICON_DIR/256x256/apps"
+cp "$SCRIPT_DIR/icons/lipcord.svg" "$ICON_DIR/scalable/apps/lipcord.svg"
+cp "$SCRIPT_DIR/icons/lipcord-128.png" "$ICON_DIR/128x128/apps/lipcord.png"
+cp "$SCRIPT_DIR/icons/lipcord-256.png" "$ICON_DIR/256x256/apps/lipcord.png"
+gtk-update-icon-cache "$ICON_DIR" 2>/dev/null || true
+echo "[+] Installed icons"
 
-# Enable and start the service
-systemctl --user daemon-reload
-systemctl --user enable lipcord.service
-systemctl --user start lipcord.service
-echo "[+] Enabled and started lipcord service"
+# Install desktop entry
+DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "$DESKTOP_DIR"
+cat > "$DESKTOP_DIR/lipcord.desktop" << EOF
+[Desktop Entry]
+Name=LipCord
+Comment=Physical security failsafe - USB ripcord monitor
+Exec=$BIN_DIR/lipcord
+Icon=lipcord
+Type=Application
+Categories=Utility;Security;
+Keywords=security;usb;lock;
+EOF
+echo "[+] Installed desktop entry"
 
 echo
-echo "=== LipCord is now active ==="
-echo "Plug in a USB drive labeled 'RipCord' to arm it."
+echo "=== LipCord installed ==="
+echo "Run 'lipcord' or find LipCord in your app launcher."
 echo "Edit $CONFIG_DIR/config to customize behavior."
-echo "Check status: systemctl --user status lipcord"

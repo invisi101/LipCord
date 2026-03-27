@@ -1,14 +1,16 @@
-> **LipCord** is a Linux port of [RipCord](https://github.com/kclose3/RipCord) by [KClose](https://github.com/kclose3), based on an idea by reddit user u/SATLTSADWFZ. All credit for the original concept and macOS implementation goes to them.
+> **LipCord** is a Linux port of [RipCord](https://github.com/kclose3/RipCord) by [KClose](https://github.com/kclose3). All credit for the original macOS implementation goes to them.
 
 ---
 
 ### LipCord - Automatically Lock & Suspend when USB Drive is Removed
-&emsp;&emsp;v0.1.0
+&emsp;&emsp;v0.2.0
 
-About this script:<br>
+About this project:<br>
 The intent of this project was to make a failsafe that would put a computer to sleep if someone were to steal the computer from someone sitting in public. This works by having a "key" drive that would be tethered to the user like a ripcord. If the computer were taken away forcefully, the USB drive would be removed and the computer will lock and suspend.
 
-This works by installing a script that checks for the presence or absence of a USB drive specifically named *RipCord*. If at any point in time, the *RipCord* drive is removed, the computer will immediately lock the session and suspend. The script runs automatically upon installation as a systemd user service, and also on login, ensuring that the safety protocol is constantly in effect.
+LipCord provides a simple GUI app with START and STOP buttons. When you press START, it confirms a USB drive labeled *LipCord* (case-insensitive) is connected, then begins monitoring. If the drive is removed, the computer immediately locks and suspends. Pressing STOP disarms the monitor so you can safely remove the drive.
+
+If you close the app while monitoring is active, the monitor continues running in the background. Reopen the app at any time to stop it.
 
 The USB drive does not need to be present at all times, only if you believe your computer might be at risk. Removing the USB drive locks and suspends the computer, but only upon initial removal after being inserted. If you unlock the computer after the drive has been removed, it will not lock again until the drive has been reinserted and removed again.
 
@@ -24,30 +26,31 @@ LipCord works on any Linux system with systemd. It tries the following lock meth
 
 Suspend is handled via `systemctl suspend`.
 
+**Requirements:** Python 3 with tkinter (`tk` on Arch, `python3-tk` on Debian/Ubuntu, `python3-tkinter` on Fedora).
+
 ---
 
-This script will install the following files:
-- `~/.local/bin/lipcord`
-- `~/.config/systemd/user/lipcord.service`
-- `~/.config/lipcord/config`
+This will install the following files:
+- `~/.local/bin/lipcord` (GUI app)
+- `~/.local/bin/lipcord-daemon` (background monitor)
+- `~/.local/share/applications/lipcord.desktop` (app launcher entry)
+- `~/.config/lipcord/config` (configuration)
 
 To install LipCord:
 1. Clone this repository or download the files
-2. Run `./install.sh` to complete the installation and start the USB monitor
+2. Run `./install.sh`
 3. Ensure your screen locker requires a password on wake/unlock (this is the default for most Linux setups)
-4. Rename a USB drive as *RipCord*
+4. Rename a USB drive as *LipCord*
 
-To use LipCord:<br>
-LipCord starts running upon installation and will launch automatically at every login. Inserting the *RipCord* USB drive will "arm" the system. The next time the drive is removed, the computer will lock and suspend.
-
-Check status:
-```
-systemctl --user status lipcord
-```
+To use LipCord:
+1. Launch **LipCord** from your app launcher or run `lipcord` in a terminal
+2. Insert your *LipCord* USB drive
+3. Click **START** to arm the monitor
+4. Click **STOP** to disarm when you want to safely remove the drive
 
 To uninstall LipCord:
 1. Run `./uninstall.sh`
-2. Or manually: delete the files noted above, then run `systemctl --user daemon-reload`
+2. Or manually: delete the installed files listed above
 
 ---
 
@@ -56,14 +59,11 @@ To uninstall LipCord:
 Edit `~/.config/lipcord/config` to customize behavior:
 
 ```bash
-# Lock the session when RipCord is removed (yes/no)
+# Lock the session when LipCord USB is removed (yes/no)
 LOCK=yes
 
-# Suspend the system when RipCord is removed (yes/no)
+# Suspend the system when LipCord USB is removed (yes/no)
 SUSPEND=yes
-
-# USB drive label to monitor
-LABEL=RipCord
 
 # Polling interval in seconds
 POLL_INTERVAL=1
@@ -72,4 +72,5 @@ POLL_INTERVAL=1
 ---
 
 ChangeLog
-- 2026.03.27	-	Initial release (Linux port)
+- 2026.03.27	-	v0.2.0 - GUI app with START/STOP, background daemon, case-insensitive USB detection
+- 2026.03.27	-	v0.1.0 - Initial release (Linux port)

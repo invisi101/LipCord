@@ -1,94 +1,144 @@
-#!/usr/bin/env bash
-# LipCord - Physical security failsafe for Linux
-# Monitors for a USB drive labeled "RipCord" and locks/suspends when removed.
-# Inspired by RipCord (https://github.com/kclose3/RipCord)
-# License: GPL-3.0
+#!/usr/bin/env python3
+"""LipCord - Physical security failsafe for Linux (GUI)"""
 
-CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/lipcord/config"
+import tkinter as tk
+import subprocess
+import os
+import signal
 
-# Defaults
-LOCK=yes
-SUSPEND=yes
-LABEL=RipCord
-POLL_INTERVAL=1
+RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+PIDFILE = os.path.join(RUNTIME_DIR, "lipcord.pid")
+DAEMON = os.path.expanduser("~/.local/bin/lipcord-daemon")
 
-# Load user config if it exists
-if [ -f "$CONFIG_FILE" ]; then
-    # shellcheck source=/dev/null
-    source "$CONFIG_FILE"
-fi
 
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [LipCord] $1"
-}
+def is_daemon_running():
+    """Check if the LipCord daemon is currently running."""
+    if not os.path.exists(PIDFILE):
+        return False
+    try:
+        with open(PIDFILE) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)
+        return True
+    except (ProcessNotFoundError, ValueError, PermissionError, FileNotFoundError):
+        # Stale PID file
+        try:
+            os.remove(PIDFILE)
+        except OSError:
+            pass
+        return False
 
-lock_session() {
-    # Try loginctl (works with most DEs/compositors on systemd)
-    if loginctl lock-session 2>/dev/null; then
-        return 0
-    fi
 
-    # Try D-Bus screensaver interface (GNOME, KDE, XFCE, etc.)
-    if dbus-send --type=method_call --dest=org.freedesktop.ScreenSaver \
-        /org/freedesktop/ScreenSaver org.freedesktop.ScreenSaver.Lock 2>/dev/null; then
-        return 0
-    fi
+def is_usb_present():
+    """Check if a USB drive labeled LipCord (case-insensitive) is attached."""
+    try:
+        result = subprocess.run(
+            ["lsblk", "-o", "LABEL", "-rn"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.splitlines():
+            if line.strip().lower() == "lipcord":
+                return True
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return False
 
-    # Try common screen lockers
-    local lockers=(hyprlock swaylock waylock i3lock xdg-screensaver xscreensaver-command)
-    for locker in "${lockers[@]}"; do
-        if command -v "$locker" &>/dev/null; then
-            case "$locker" in
-                xdg-screensaver)    "$locker" lock & return 0 ;;
-                xscreensaver-command) "$locker" -lock & return 0 ;;
-                *)                  "$locker" & return 0 ;;
-            esac
-        fi
-    done
 
-    log "WARNING: Could not find a screen locker"
-    return 1
-}
+class LipCordApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("LipCord")
+        self.root.resizable(False, False)
 
-trigger() {
-    log "RipCord USB removed! Triggering security response..."
+        frame = tk.Frame(self.root, padx=20, pady=15)
+        frame.pack()
 
-    if [ "$LOCK" = "yes" ]; then
-        log "Locking session..."
-        lock_session
-    fi
+        title = tk.Label(frame, text="LipCord", font=("sans-serif", 16, "bold"))
+        title.pack(pady=(0, 10))
 
-    if [ "$SUSPEND" = "yes" ]; then
-        log "Suspending system..."
-        systemctl suspend
-    fi
-}
+        self.status_label = tk.Label(
+            frame, text="", font=("sans-serif", 11), width=28, anchor="center"
+        )
+        self.status_label.pack(pady=(0, 5))
 
-wait_for_drive() {
-    log "Waiting for RipCord USB drive..."
-    while [ ! -e "/dev/disk/by-label/$LABEL" ]; do
-        sleep "$POLL_INTERVAL"
-    done
-    log "RipCord USB drive detected. Armed."
-}
+        self.usb_label = tk.Label(
+            frame, text="", font=("sans-serif", 9), fg="#666666"
+        )
+        self.usb_label.pack(pady=(0, 12))
 
-main() {
-    log "Starting LipCord daemon"
-    log "Config: LOCK=$LOCK SUSPEND=$SUSPEND LABEL=$LABEL POLL_INTERVAL=${POLL_INTERVAL}s"
+        btn_frame = tk.Frame(frame)
+        btn_frame.pack()
 
-    while true; do
-        wait_for_drive
+        self.start_btn = tk.Button(
+            btn_frame, text="START", width=10, font=("sans-serif", 11, "bold"),
+            fg="white", bg="#2e7d32", activebackground="#1b5e20",
+            command=self.start_daemon
+        )
+        self.start_btn.pack(side=tk.LEFT, padx=5)
 
-        # Monitor until the drive is removed
-        while [ -e "/dev/disk/by-label/$LABEL" ]; do
-            sleep "$POLL_INTERVAL"
-        done
+        self.stop_btn = tk.Button(
+            btn_frame, text="STOP", width=10, font=("sans-serif", 11, "bold"),
+            fg="white", bg="#c62828", activebackground="#b71c1c",
+            command=self.stop_daemon
+        )
+        self.stop_btn.pack(side=tk.LEFT, padx=5)
 
-        trigger
+        self.refresh_state()
+        self.root.mainloop()
 
-        # After waking, loop back to wait for re-insertion
-        log "System resumed. Waiting for RipCord to be re-inserted..."
-    done
-}
+    def refresh_state(self):
+        """Update UI to reflect current daemon and USB state."""
+        running = is_daemon_running()
+        usb = is_usb_present()
 
-main
+        if running:
+            self.status_label.config(text="Armed", fg="#2e7d32")
+            self.start_btn.config(state=tk.DISABLED)
+            self.stop_btn.config(state=tk.NORMAL)
+        else:
+            self.status_label.config(text="Disarmed", fg="#c62828")
+            self.start_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+
+        if usb:
+            self.usb_label.config(text="USB: LipCord connected")
+        else:
+            self.usb_label.config(text="USB: not detected")
+
+        # Poll every 2 seconds to keep state current
+        self.root.after(2000, self.refresh_state)
+
+    def start_daemon(self):
+        """Start the monitoring daemon."""
+        if is_daemon_running():
+            return
+
+        if not is_usb_present():
+            self.status_label.config(
+                text="Insert LipCord USB first", fg="#e65100"
+            )
+            return
+
+        subprocess.Popen(
+            [DAEMON],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self.root.after(500, self.refresh_state)
+
+    def stop_daemon(self):
+        """Stop the monitoring daemon."""
+        if not os.path.exists(PIDFILE):
+            return
+        try:
+            with open(PIDFILE) as f:
+                pid = int(f.read().strip())
+            os.kill(pid, signal.SIGTERM)
+        except (ProcessNotFoundError, ValueError, PermissionError, FileNotFoundError):
+            pass
+        self.root.after(500, self.refresh_state)
+
+
+if __name__ == "__main__":
+    LipCordApp()

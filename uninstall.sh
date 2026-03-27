@@ -1,29 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVICE_DIR="$HOME/.config/systemd/user"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+PIDFILE="$RUNTIME_DIR/lipcord.pid"
+BIN_DIR="$HOME/.local/bin"
+DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 echo "=== LipCord Uninstaller ==="
 echo
 
-# Stop and disable the service
-if systemctl --user is-active lipcord.service &>/dev/null; then
-    systemctl --user stop lipcord.service
-    echo "[+] Stopped lipcord service"
-fi
-
-if systemctl --user is-enabled lipcord.service &>/dev/null; then
-    systemctl --user disable lipcord.service
-    echo "[+] Disabled lipcord service"
+# Stop daemon if running
+if [ -f "$PIDFILE" ]; then
+    pid=$(cat "$PIDFILE" 2>/dev/null || true)
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid"
+        echo "[+] Stopped running daemon"
+    fi
+    rm -f "$PIDFILE"
 fi
 
 # Remove files
-rm -f "$HOME/.local/bin/lipcord"
-echo "[+] Removed ~/.local/bin/lipcord"
+rm -f "$BIN_DIR/lipcord" "$BIN_DIR/lipcord-daemon"
+echo "[+] Removed lipcord and lipcord-daemon from $BIN_DIR"
 
-rm -f "$SERVICE_DIR/lipcord.service"
-systemctl --user daemon-reload 2>/dev/null
-echo "[+] Removed systemd user service"
+rm -f "$DESKTOP_DIR/lipcord.desktop"
+echo "[+] Removed desktop entry"
+
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+rm -f "$ICON_DIR/scalable/apps/lipcord.svg"
+rm -f "$ICON_DIR/128x128/apps/lipcord.png"
+rm -f "$ICON_DIR/256x256/apps/lipcord.png"
+gtk-update-icon-cache "$ICON_DIR" 2>/dev/null || true
+echo "[+] Removed icons"
 
 echo
 read -rp "Remove config at ~/.config/lipcord/? [y/N] " answer
