@@ -62,6 +62,11 @@ To uninstall LipCord:
 
 Edit `~/.config/lipcord/config` to customize behavior:
 
+- **LOCK** - Activates the lock screen, requiring your password to get back in. The computer stays fully on.
+- **SUSPEND** - Puts the computer to sleep (like closing a laptop lid). RAM stays powered but everything else shuts down. When woken, the lock screen appears.
+
+By default both are enabled. This means if someone grabs your laptop, it immediately sleeps *and* they hit a password prompt if they manage to wake it.
+
 ```bash
 # Lock the session when LipCord USB is removed (yes/no)
 LOCK=yes
