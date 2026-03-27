@@ -83,6 +83,12 @@ class LipCordApp:
         )
         self.stop_btn.pack(side=tk.LEFT, padx=5)
 
+        close_btn = tk.Button(
+            frame, text="Close", width=22, font=("sans-serif", 9),
+            command=self.root.destroy
+        )
+        close_btn.pack(pady=(12, 0))
+
         self.refresh_state()
         self.root.mainloop()
 
