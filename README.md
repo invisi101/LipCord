@@ -7,7 +7,7 @@
 ---
 
 ### LipCord - Automatically Lock & Suspend when USB Drive is Removed
-&emsp;&emsp;v0.2.0
+&emsp;&emsp;v1.0
 
 About this project:<br>
 The intent of this project was to make a failsafe that would put a computer to sleep if someone were to steal the computer from someone sitting in public. This works by having a "key" drive that would be tethered to the user like a ripcord. If the computer were taken away forcefully, the USB drive would be removed and the computer will lock and suspend.
