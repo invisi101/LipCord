@@ -87,3 +87,8 @@ POLL_INTERVAL=1
 ChangeLog
 - 2026.03.27	-	v0.2.0 - GUI app with START/STOP, background daemon, case-insensitive USB detection
 - 2026.03.27	-	v0.1.0 - Initial release (Linux port)
+
+---
+
+> [!WARNING]
+> **Don't forget to STOP the app from INSIDE THE GUI when you're done with it.** The monitor runs in the background even after closing the window. If you don't stop it first, removing the USB drive will lock and suspend your system.
