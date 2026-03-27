@@ -30,7 +30,7 @@ LipCord works on any Linux system with systemd. It tries the following lock meth
 
 Suspend is handled via `systemctl suspend`.
 
-**Requirements:** Python 3 with tkinter (`tk` on Arch, `python3-tk` on Debian/Ubuntu, `python3-tkinter` on Fedora).
+**Requirements:** Python 3 with [tkinter](https://docs.python.org/3/library/tkinter.html), a lightweight GUI toolkit included with Python on most systems. If it's not already installed, the install script will automatically install it for you. It can also be installed manually: `tk` on Arch, `python3-tk` on Debian/Ubuntu, `python3-tkinter` on Fedora.
 
 ---
 

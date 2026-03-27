@@ -8,14 +8,22 @@ BIN_DIR="$HOME/.local/bin"
 echo "=== LipCord Installer ==="
 echo
 
-# Check for python3 + tkinter
+# Install tkinter if needed
 if ! python3 -c "import tkinter" 2>/dev/null; then
-    echo "[!] Python tkinter is required but not found."
-    echo "    Install it with your package manager:"
-    echo "      Arch:   sudo pacman -S tk"
-    echo "      Debian: sudo apt install python3-tk"
-    echo "      Fedora: sudo dnf install python3-tkinter"
-    exit 1
+    echo "[*] Installing tkinter (required for the GUI)..."
+    if command -v pacman &>/dev/null; then
+        sudo pacman -S --noconfirm tk
+    elif command -v apt &>/dev/null; then
+        sudo apt install -y python3-tk
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y python3-tkinter
+    elif command -v zypper &>/dev/null; then
+        sudo zypper install -y python3-tk
+    else
+        echo "[!] Could not detect package manager. Please install tkinter manually."
+        exit 1
+    fi
+    echo "[+] Installed tkinter"
 fi
 
 # Install files
