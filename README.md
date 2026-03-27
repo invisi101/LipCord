@@ -91,5 +91,5 @@ ChangeLog
 ---
 
 > [!IMPORTANT]
-> **REMINDER:**
-> **Don't forget to STOP the app from INSIDE THE GUI when you're done with it.** The monitor runs in the background even after closing the window. If you don't stop it first, removing the USB drive will lock and suspend your system.
+> $\color{red}{\textsf{REMINDER:}}$
+> **Don't forget to** $\color{red}{\textsf{STOP}}$ **the app from** $\color{red}{\textsf{INSIDE THE GUI}}$ **when you're done with it.** The monitor runs in the background even after closing the window. If you don't stop it first, removing the USB drive will lock and suspend your system.
