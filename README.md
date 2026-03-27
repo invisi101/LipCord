@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icons/lipcord-256.png" width="128" alt="LipCord icon"/>
+</p>
+
 > **LipCord** is a Linux port of [RipCord](https://github.com/kclose3/RipCord) by [KClose](https://github.com/kclose3). All credit for the original macOS implementation goes to them.
 
 ---
