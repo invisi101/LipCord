@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# LipCord - Physical security failsafe for Linux
+# Monitors for a USB drive labeled "RipCord" and locks/suspends when removed.
+# Inspired by RipCord (https://github.com/kclose3/RipCord)
+# License: GPL-3.0
+
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/lipcord/config"
+
+# Defaults
+LOCK=yes
+SUSPEND=yes
+LABEL=RipCord
+POLL_INTERVAL=1
+
+# Load user config if it exists
+if [ -f "$CONFIG_FILE" ]; then
+    # shellcheck source=/dev/null
+    source "$CONFIG_FILE"
+fi
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [LipCord] $1"
+}
+
+lock_session() {
+    # Try loginctl (works with most DEs/compositors on systemd)
+    if loginctl lock-session 2>/dev/null; then
+        return 0
+    fi
+
+    # Try D-Bus screensaver interface (GNOME, KDE, XFCE, etc.)
+    if dbus-send --type=method_call --dest=org.freedesktop.ScreenSaver \
+        /org/freedesktop/ScreenSaver org.freedesktop.ScreenSaver.Lock 2>/dev/null; then
+        return 0
+    fi
+
+    # Try common screen lockers
+    local lockers=(hyprlock swaylock waylock i3lock xdg-screensaver xscreensaver-command)
+    for locker in "${lockers[@]}"; do
+        if command -v "$locker" &>/dev/null; then
+            case "$locker" in
+                xdg-screensaver)    "$locker" lock & return 0 ;;
+                xscreensaver-command) "$locker" -lock & return 0 ;;
+                *)                  "$locker" & return 0 ;;
+            esac
+        fi
+    done
+
+    log "WARNING: Could not find a screen locker"
+    return 1
+}
+
+trigger() {
+    log "RipCord USB removed! Triggering security response..."
+
+    if [ "$LOCK" = "yes" ]; then
+        log "Locking session..."
+        lock_session
+    fi
+
+    if [ "$SUSPEND" = "yes" ]; then
+        log "Suspending system..."
+        systemctl suspend
+    fi
+}
+
+wait_for_drive() {
+    log "Waiting for RipCord USB drive..."
+    while [ ! -e "/dev/disk/by-label/$LABEL" ]; do
+        sleep "$POLL_INTERVAL"
+    done
+    log "RipCord USB drive detected. Armed."
+}
+
+main() {
+    log "Starting LipCord daemon"
+    log "Config: LOCK=$LOCK SUSPEND=$SUSPEND LABEL=$LABEL POLL_INTERVAL=${POLL_INTERVAL}s"
+
+    while true; do
+        wait_for_drive
+
+        # Monitor until the drive is removed
+        while [ -e "/dev/disk/by-label/$LABEL" ]; do
+            sleep "$POLL_INTERVAL"
+        done
+
+        trigger
+
+        # After waking, loop back to wait for re-insertion
+        log "System resumed. Waiting for RipCord to be re-inserted..."
+    done
+}
+
+main

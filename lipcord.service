@@ -1,0 +1,13 @@
+[Unit]
+Description=LipCord - Physical security failsafe (USB ripcord monitor)
+Documentation=https://github.com/kclose3/RipCord
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lipcord
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
